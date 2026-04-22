@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PrismTalk Live Translate</title>
+    <script>
+      (function redirectToApp() {
+        var target = new URL("./public/", window.location.href);
+        target.search = window.location.search;
+        target.hash = window.location.hash;
+        window.location.replace(target.toString());
+      })();
+    </script>
+  </head>
+  <body>
+    <p>Redirecting to PrismTalk Live Translate...</p>
+    <p><a href="./public/">Open the app</a></p>
+  </body>
+</html>
