@@ -68,7 +68,7 @@ const UI_COPY = {
     participant_meta: "입력: {input} · 출력: {output}",
     runtime_ready: "{mode} 연결 준비 완료 · 서버 {server} · {provider}",
     runtime_failed:
-      "서버 후보({servers})에 연결할 수 없습니다. 먼저 npm.cmd start 로 백엔드를 실행해 주세요.",
+      "서버 후보({servers})에 연결할 수 없습니다. 배포 백엔드를 확인한 뒤 다시 시도해 주세요.",
     socket_ready: "실시간 연결이 준비되었습니다. {server}",
     socket_failed: "실시간 서버 연결 실패: {server}",
     unsupported_socket: "Socket.io 클라이언트를 불러오지 못했습니다. 네트워크 연결을 확인해 주세요.",
@@ -172,7 +172,7 @@ const UI_COPY = {
     participant_meta: "Input: {input} · Output: {output}",
     runtime_ready: "{mode} ready · server {server} · {provider}",
     runtime_failed:
-      "Unable to connect to server candidates ({servers}). Start the backend first with npm.cmd start.",
+      "Unable to connect to server candidates ({servers}). Please verify the deployed backend and try again.",
     socket_ready: "Realtime connection ready. {server}",
     socket_failed: "Realtime server connection failed: {server}",
     unsupported_socket: "Could not load the Socket.io client. Please check your network connection.",
