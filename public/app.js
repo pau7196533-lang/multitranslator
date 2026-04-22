@@ -281,6 +281,16 @@ Object.assign(UI_COPY.en, {
   room_restore_failed: "Unable to restore the previous room. The room may no longer be available."
 });
 
+Object.assign(UI_COPY.ko, {
+  waking_server: "서버를 깨우는 중입니다. 잠시만 기다려 주세요...",
+  server_unavailable: "백엔드 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요. {server}"
+});
+
+Object.assign(UI_COPY.en, {
+  waking_server: "Waking the backend server. Please wait a moment...",
+  server_unavailable: "Unable to reach the backend server. Please try again shortly. {server}"
+});
+
 const FALLBACK_LANGUAGE_OPTIONS = [
   { speech: "ko-KR", labels: { ko: "한국어", en: "Korean" } },
   { speech: "en-US", labels: { ko: "English (United States)", en: "English (United States)" } },
@@ -294,6 +304,7 @@ const LANGUAGE_OPTIONS = Array.isArray(window.STT_LANGUAGE_OPTIONS) && window.ST
 
 const state = {
   socket: null,
+  socketBaseUrl: "",
   roomCode: "",
   joinUrl: "",
   qrCodeDataUrl: "",
@@ -398,33 +409,63 @@ function bindEvents() {
 }
 
 async function loadRuntimeConfig() {
-  const candidates = getServerCandidates();
+  return loadRuntimeConfigWithCandidates(getServerCandidates(), {
+    requestTimeoutMs: 8000,
+    retriesPerCandidate: 1,
+    retryDelayMs: 1000,
+    silent: false
+  });
+}
 
+async function loadRuntimeConfigWithCandidates(
+  candidates,
+  { requestTimeoutMs = 8000, retriesPerCandidate = 1, retryDelayMs = 1000, silent = false } = {}
+) {
   for (const candidate of candidates) {
-    try {
-      state.serverBaseUrl = normalizeBaseUrl(candidate);
-      const response = await fetch(withApiBase("/api/runtime-config"));
-      if (!response.ok) {
-        throw new Error(`Runtime config request failed: ${response.status}`);
-      }
-
-      state.runtimeConfig = await response.json();
-      const mode = window.location.protocol === "file:" ? t("file_mode") : t("served_mode");
-      setStatus(
-        interpolate(t("runtime_ready"), {
-          mode,
-          server: state.serverBaseUrl,
-          provider: translateProviderLabel(state.runtimeConfig.translationProvider)
-        })
-      );
-      renderMessages();
-      return;
-    } catch (_error) {
+    const normalizedCandidate = sanitizeBaseUrl(candidate);
+    if (!normalizedCandidate) {
       continue;
+    }
+
+    for (let attempt = 0; attempt < retriesPerCandidate; attempt += 1) {
+      try {
+        const response = await fetchWithTimeout(
+          `${normalizedCandidate}/api/runtime-config`,
+          {},
+          requestTimeoutMs
+        );
+
+        if (!response.ok) {
+          throw new Error(`Runtime config request failed: ${response.status}`);
+        }
+
+        state.serverBaseUrl = normalizeBaseUrl(normalizedCandidate);
+        state.runtimeConfig = await response.json();
+        const mode = window.location.protocol === "file:" ? t("file_mode") : t("served_mode");
+        setStatus(
+          interpolate(t("runtime_ready"), {
+            mode,
+            server: state.serverBaseUrl,
+            provider: translateProviderLabel(state.runtimeConfig.translationProvider)
+          })
+        );
+        renderMessages();
+        return true;
+      } catch (_error) {
+        if (attempt < retriesPerCandidate - 1) {
+          await delay(retryDelayMs);
+        }
+      }
     }
   }
 
-  setStatus(interpolate(t("runtime_failed"), { servers: candidates.join(", ") }));
+  state.runtimeConfig = null;
+
+  if (!silent) {
+    setStatus(interpolate(t("runtime_failed"), { servers: candidates.join(", ") }));
+  }
+
+  return false;
 }
 
 function connectSocket() {
@@ -440,6 +481,8 @@ function connectSocket() {
   if (state.socket) {
     state.socket.disconnect();
   }
+
+  state.socketBaseUrl = state.serverBaseUrl;
 
   state.socket = io(state.serverBaseUrl, {
     transports: ["websocket", "polling"],
@@ -516,6 +559,97 @@ async function ensureSocketReady() {
   });
 }
 
+async function ensureRealtimeReady({ wakeServer = false } = {}) {
+  let runtimeReady = state.runtimeConfig
+    ? true
+    : await loadRuntimeConfigWithCandidates(getServerCandidates(), {
+        requestTimeoutMs: wakeServer ? 15000 : 8000,
+        retriesPerCandidate: wakeServer ? 3 : 1,
+        retryDelayMs: wakeServer ? 2000 : 1000,
+        silent: !wakeServer
+      });
+
+  if (!runtimeReady) {
+    return false;
+  }
+
+  if (!state.socket || state.socketBaseUrl !== state.serverBaseUrl) {
+    connectSocket();
+  }
+
+  let socketReady = await ensureSocketReady();
+  if (socketReady || !wakeServer) {
+    return socketReady;
+  }
+
+  runtimeReady = await loadRuntimeConfigWithCandidates(getServerCandidates(), {
+    requestTimeoutMs: 15000,
+    retriesPerCandidate: 2,
+    retryDelayMs: 2000,
+    silent: false
+  });
+
+  if (!runtimeReady) {
+    return false;
+  }
+
+  connectSocket();
+  socketReady = await ensureSocketReady();
+  return socketReady;
+}
+
+async function requestJsonWithRetry(
+  endpoint,
+  { fetchOptions = {}, requestTimeoutMs = 10000, retries = 1, retryDelayMs = 1000 } = {}
+) {
+  let lastError = null;
+
+  for (let attempt = 0; attempt < retries; attempt += 1) {
+    try {
+      const response = await fetchWithTimeout(withApiBase(endpoint), fetchOptions, requestTimeoutMs);
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data?.message || `Request failed: ${response.status}`);
+      }
+
+      return data;
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < retries - 1) {
+        await delay(retryDelayMs);
+      }
+    }
+  }
+
+  throw lastError || new Error("Request failed.");
+}
+
+async function fetchWithTimeout(resource, options = {}, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(resource, {
+      ...options,
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("The server took too long to respond.");
+    }
+
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+function delay(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 function initSpeechRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -565,15 +699,29 @@ async function handleCreateRoom() {
   setStatus(t("creating_room"));
 
   try {
-    const response = await fetch(withApiBase("/api/rooms"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" }
-    });
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || t("create_room_failed"));
+    if (!state.runtimeConfig) {
+      setStatus(t("waking_server"));
     }
+
+    const realtimeReady = await ensureRealtimeReady({ wakeServer: true });
+    if (!realtimeReady) {
+      setStatus(
+        interpolate(t("server_unavailable"), {
+          server: state.serverBaseUrl || getServerCandidates().join(", ")
+        })
+      );
+      return;
+    }
+
+    const data = await requestJsonWithRetry("/api/rooms", {
+      fetchOptions: {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      },
+      requestTimeoutMs: 20000,
+      retries: 2,
+      retryDelayMs: 1500
+    });
 
     state.roomCode = data.roomCode;
     state.joinUrl = data.joinUrl;
@@ -581,9 +729,9 @@ async function handleCreateRoom() {
     state.isHost = true;
     els.roomCodeInput.value = data.roomCode;
 
-    await joinRoom(data.roomCode, true);
+    await joinRoom(data.roomCode, true, { skipSocketCheck: true });
   } catch (error) {
-    setStatus(error.message);
+    setStatus(error?.message || t("create_room_failed"));
   }
 }
 
@@ -603,60 +751,67 @@ async function joinRoom(roomCode, isHost, options = {}) {
     return;
   }
 
-  const socketReady = await ensureSocketReady();
-  if (!socketReady) {
-    setStatus(t("socket_not_ready"));
-    return;
+  if (!options.skipSocketCheck) {
+    const socketReady = await ensureRealtimeReady({ wakeServer: true });
+    if (!socketReady) {
+      setStatus(t("socket_not_ready"));
+      return;
+    }
   }
 
   setStatus(t("joining_room"));
 
-  state.socket.emit(
-    "join-room",
-    {
-      roomCode: sanitizedCode,
-      name: profile.name,
-      inputLanguage: profile.inputLanguage,
-      outputLanguage: profile.outputLanguage,
-      isHost
-    },
-    (response) => {
-      if (!response.ok) {
-        if (options.restoreAttempt) {
-          clearRoomSession();
-          setStatus(response.message || t("room_restore_failed"));
+  return new Promise((resolve) => {
+    state.socket.emit(
+      "join-room",
+      {
+        roomCode: sanitizedCode,
+        name: profile.name,
+        inputLanguage: profile.inputLanguage,
+        outputLanguage: profile.outputLanguage,
+        isHost
+      },
+      (response) => {
+        if (!response?.ok) {
+          if (options.restoreAttempt) {
+            clearRoomSession();
+            setStatus(response?.message || t("room_restore_failed"));
+            resolve(false);
+            return;
+          }
+
+          setStatus(response?.message || t("join_failed"));
+          resolve(false);
           return;
         }
 
-        setStatus(response.message || t("join_failed"));
-        return;
+        state.roomCode = sanitizedCode;
+        state.isHost = isHost;
+        state.messages.clear();
+
+        if (!state.joinUrl) {
+          state.joinUrl = buildAbsoluteJoinUrl(sanitizedCode);
+        }
+
+        applyHistory(response.history || []);
+        enterRoomLayout();
+        showRoom();
+        state.participants = response.room.participants || [];
+        renderParticipants();
+        renderMessages();
+        syncRoomSelectors();
+        persistRoomSession({
+          roomCode: sanitizedCode,
+          isHost,
+          joinUrl: state.joinUrl
+        });
+        setStatus(options.restoreAttempt ? t("room_restored") : interpolate(t("joined_room"), { code: sanitizedCode }));
+        window.history.replaceState({}, "", buildUiUrl(sanitizedCode));
+        els.roomSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        resolve(true);
       }
-
-      state.roomCode = sanitizedCode;
-      state.isHost = isHost;
-      state.messages.clear();
-
-      if (!state.joinUrl) {
-        state.joinUrl = buildAbsoluteJoinUrl(sanitizedCode);
-      }
-
-      applyHistory(response.history || []);
-      enterRoomLayout();
-      showRoom();
-      state.participants = response.room.participants || [];
-      renderParticipants();
-      renderMessages();
-      syncRoomSelectors();
-      persistRoomSession({
-        roomCode: sanitizedCode,
-        isHost,
-        joinUrl: state.joinUrl
-      });
-      setStatus(options.restoreAttempt ? t("room_restored") : interpolate(t("joined_room"), { code: sanitizedCode }));
-      window.history.replaceState({}, "", buildUiUrl(sanitizedCode));
-      els.roomSection.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  );
+    );
+  });
 }
 
 function showRoom() {
