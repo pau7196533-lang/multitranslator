@@ -1467,7 +1467,7 @@ function buildUiUrl(roomCode) {
     params.set("server", state.serverBaseUrl);
   }
 
-  return `/?${params.toString()}`;
+  return `${getAppEntryPath()}?${params.toString()}`;
 }
 
 function buildAbsoluteJoinUrl(roomCode) {
@@ -1520,6 +1520,20 @@ function sanitizeBaseUrl(value) {
 function isStaticFrontendHost(hostname) {
   const normalized = String(hostname || "").trim().toLowerCase();
   return normalized.endsWith(".netlify.app") || normalized.endsWith(".github.io");
+}
+
+function getAppEntryPath() {
+  const pathname = String(window.location.pathname || "/");
+
+  if (!pathname || pathname === "/") {
+    return "/";
+  }
+
+  if (pathname.endsWith(".html")) {
+    return pathname;
+  }
+
+  return pathname.endsWith("/") ? pathname : `${pathname}/`;
 }
 
 function shouldPersistServerInUrl() {

@@ -1,7 +1,8 @@
 window.PRISMTALK_DEPLOY_CONFIG = {
   backendUrl: "https://prismtalk-realtime.onrender.com",
   backendFallbacks: {
-    "mulittranslator.netlify.app": "https://prismtalk-realtime.onrender.com"
+    "mulittranslator.netlify.app": "https://prismtalk-realtime.onrender.com",
+    "pau7196533-lang.github.io": "https://prismtalk-realtime.onrender.com"
   },
   backendReplacements: {
     "https://21f2e060752651.lhr.life": "https://prismtalk-realtime.onrender.com",
