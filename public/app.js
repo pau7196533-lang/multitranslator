@@ -4,6 +4,9 @@ const SERVER_BASE_URL_KEY = "prismtalk-server-base-url";
 const SPEECH_API_KEY_STORAGE_KEY = "prismtalk-google-speech-api-key";
 const ROOM_SESSION_KEY = "prismtalk-room-session";
 const DEPLOY_CONFIG = window.PRISMTALK_DEPLOY_CONFIG || {};
+const DEPLOYED_BACKEND_CANDIDATES = Array.isArray(DEPLOY_CONFIG.backendCandidates)
+  ? DEPLOY_CONFIG.backendCandidates
+  : [];
 const DEPLOYED_BACKEND_FALLBACKS = DEPLOY_CONFIG.backendFallbacks || {};
 const DEPLOYED_BACKEND_REPLACEMENTS = DEPLOY_CONFIG.backendReplacements || {};
 
@@ -1542,7 +1545,8 @@ function getInitialServerBaseUrl() {
   const params = new URLSearchParams(window.location.search);
   const explicit = migrateConfiguredBaseUrl(params.get("server"));
   const saved = migrateConfiguredBaseUrl(localStorage.getItem(SERVER_BASE_URL_KEY));
-  const configured = getConfiguredBackendUrl();
+  const configuredCandidates = getConfiguredBackendCandidates();
+  const configured = configuredCandidates[0] || "";
   const deployedFallback = getDeployedBackendFallback();
 
   if (explicit) {
@@ -1576,7 +1580,7 @@ function getServerCandidates() {
   const params = new URLSearchParams(window.location.search);
   const explicit = migrateConfiguredBaseUrl(params.get("server"));
   const saved = migrateConfiguredBaseUrl(localStorage.getItem(SERVER_BASE_URL_KEY));
-  const configured = getConfiguredBackendUrl();
+  const configuredCandidates = getConfiguredBackendCandidates();
   const deployedFallback = getDeployedBackendFallback();
   const candidates = [];
 
@@ -1588,8 +1592,8 @@ function getServerCandidates() {
     candidates.push(saved);
   }
 
-  if (configured) {
-    candidates.push(configured);
+  if (configuredCandidates.length > 0) {
+    candidates.push(...configuredCandidates);
   }
 
   if (deployedFallback) {
@@ -1646,7 +1650,19 @@ function getDeployedBackendFallback() {
 }
 
 function getConfiguredBackendUrl() {
-  return sanitizeBaseUrl(DEPLOY_CONFIG.backendUrl || "");
+  return getConfiguredBackendCandidates()[0] || "";
+}
+
+function getConfiguredBackendCandidates() {
+  const configured = [];
+
+  if (DEPLOY_CONFIG.backendUrl) {
+    configured.push(DEPLOY_CONFIG.backendUrl);
+  }
+
+  configured.push(...DEPLOYED_BACKEND_CANDIDATES);
+
+  return [...new Set(configured.map((value) => sanitizeBaseUrl(value)).filter(Boolean))];
 }
 
 function migrateConfiguredBaseUrl(value) {

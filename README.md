@@ -6,6 +6,8 @@
 
 [Open the app on Netlify](https://mulittranslator.netlify.app/)
 
+[Deploy the backend to Render](https://render.com/deploy?repo=https://github.com/pau7196533-lang/multitranslator)
+
 Repository page note:
 `https://github.com/pau7196533-lang/multitranslator` is GitHub's code/repository page, so GitHub will always show the repository UI there rather than the running app.
 Use the GitHub Pages or Netlify link above to open the actual app.
@@ -90,6 +92,14 @@ This creates:
 - Put it behind Nginx or a cloud load balancer if needed
 - Set `PUBLIC_BASE_URL` to the real public backend URL
 - Use GitHub Pages or Netlify for the static frontend
+
+## Render Notes
+
+- Create a `Web Service`, not a `Static Site`
+- Use the repository root and the included `render.yaml`
+- Health check path should be `/health`
+- `FRONTEND_BASE_URL` should point to `https://pau7196533-lang.github.io/multitranslator/public/`
+- `CORS_ORIGIN` should allow both `https://pau7196533-lang.github.io` and `https://mulittranslator.netlify.app`
 
 ## Notes
 

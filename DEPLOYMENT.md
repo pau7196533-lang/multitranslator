@@ -15,17 +15,22 @@
 ```js
 window.PRISMTALK_DEPLOY_CONFIG = {
   backendUrl: "https://prismtalk-realtime.onrender.com",
+  backendCandidates: [
+    "https://prismtalk-realtime.onrender.com",
+    "https://current-temporary-backend.example"
+  ],
   backendFallbacks: {
-    "mulittranslator.netlify.app": "https://prismtalk-realtime.onrender.com"
+    "mulittranslator.netlify.app": "https://prismtalk-realtime.onrender.com",
+    "pau7196533-lang.github.io": "https://prismtalk-realtime.onrender.com"
   },
   backendReplacements: {
-    "https://21f2e060752651.lhr.life": "https://prismtalk-realtime.onrender.com",
-    "https://29f21c4f5c6e90.lhr.life": "https://prismtalk-realtime.onrender.com"
+    "https://21f2e060752651.lhr.life": "https://current-temporary-backend.example",
+    "https://29f21c4f5c6e90.lhr.life": "https://current-temporary-backend.example"
   }
 };
 ```
 
-This also upgrades browsers that still have the old temporary tunnel cached in local storage.
+This lets the app prefer Render first and fall back to the temporary backend until Render is healthy again.
 
 ## 1. Backend hosting
 
@@ -38,8 +43,8 @@ Deploy this repository root to a Render `web service`, not a static site.
 Recommended backend environment variables:
 
 ```env
-FRONTEND_BASE_URL=https://mulittranslator.netlify.app
-CORS_ORIGIN=https://mulittranslator.netlify.app
+FRONTEND_BASE_URL=https://pau7196533-lang.github.io/multitranslator/public/
+CORS_ORIGIN=https://pau7196533-lang.github.io,https://mulittranslator.netlify.app
 HTTPS=false
 PUBLIC_BASE_URL=https://prismtalk-realtime.onrender.com
 GOOGLE_TRANSLATE_API_KEY=
@@ -66,7 +71,7 @@ This repo now includes [`netlify.toml`](/D:/OneDrive%20-%20FMB/Codex/%EB%8B%A4%E
 
 1. Create or fix the Render `web service`
 2. Wait until `/health` returns `200`
-3. Confirm [`public/deploy-config.js`](/D:/OneDrive%20-%20FMB/Codex/%EB%8B%A4%EA%B5%AD%EC%96%B4%20%EB%8F%99%EC%8B%9C%EB%B2%88%EC%97%AD%EC%95%B1/public/deploy-config.js) still points to `https://prismtalk-realtime.onrender.com`
+3. Confirm [`public/deploy-config.js`](/D:/OneDrive%20-%20FMB/Codex/%EB%8B%A4%EA%B5%AD%EC%96%B4%20%EB%8F%99%EC%8B%9C%EB%B2%88%EC%97%AD%EC%95%B1/public/deploy-config.js) prefers `https://prismtalk-realtime.onrender.com`
 4. Trigger the Netlify build hook
 5. Confirm the live HTML includes `deploy-config.js`
 6. Test room creation, QR join, and realtime translation
@@ -84,8 +89,8 @@ Then verify room creation, QR join, and realtime socket connection from two devi
 You can copy from [`render.env.example`](/D:/OneDrive%20-%20FMB/Codex/%EB%8B%A4%EA%B5%AD%EC%96%B4%20%EB%8F%99%EC%8B%9C%EB%B2%88%EC%97%AD%EC%95%B1/render.env.example) and set:
 
 ```env
-FRONTEND_BASE_URL=https://mulittranslator.netlify.app
-CORS_ORIGIN=https://mulittranslator.netlify.app
+FRONTEND_BASE_URL=https://pau7196533-lang.github.io/multitranslator/public/
+CORS_ORIGIN=https://pau7196533-lang.github.io,https://mulittranslator.netlify.app
 HTTPS=false
 PUBLIC_BASE_URL=https://prismtalk-realtime.onrender.com
 GOOGLE_TRANSLATE_API_KEY=
