@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PrismTalk Live Translate</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Pretendard:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="background-orb orb-a"></div>
+    <div class="background-orb orb-b"></div>
+    <div class="background-grid"></div>
+
+    <main class="shell">
+      <header class="app-toolbar">
+        <div class="toolbar-brand">
+          <span class="toolbar-badge" data-i18n="toolbar_badge">Live UI</span>
+          <strong>PrismTalk</strong>
+        </div>
+        <button id="uiSettingsBtn" class="ghost-btn settings-btn" type="button">
+          <span data-i18n="settings_button">언어 설정</span>
+        </button>
+      </header>
+
+      <section id="heroSection" class="hero glass-panel">
+        <div class="hero-copy">
+          <span class="eyebrow" data-i18n="hero_eyebrow">실시간 다국어 대화</span>
+          <h1>PrismTalk Live Translate</h1>
+          <p data-i18n="hero_description">
+            QR 코드 또는 4자리 코드만으로 입장하고, 각자 원하는 언어로 동시에 번역되는 실시간 대화 공간입니다.
+          </p>
+          <div class="hero-badges">
+            <span data-i18n="hero_badge_google">Google 기반 번역</span>
+            <span data-i18n="hero_badge_stt">Web Speech STT</span>
+            <span data-i18n="hero_badge_responsive">모바일 · 태블릿 · 데스크탑 최적화</span>
+          </div>
+        </div>
+        <div class="hero-preview glass-card">
+          <div class="preview-head">
+            <span class="status-dot"></span>
+            <span data-i18n="preview_mode">무음 번역 모드</span>
+          </div>
+          <div class="preview-bubble">
+            <strong data-i18n="label_original">원문</strong>
+            <p data-i18n="preview_original_text">안녕하세요 반갑습니다</p>
+          </div>
+          <div class="preview-bubble translated">
+            <strong data-i18n="label_translation">번역</strong>
+            <p data-i18n="preview_translated_text">hello nice to meet you</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="entrySection" class="entry-grid">
+        <article class="glass-panel form-panel">
+          <div class="section-head">
+            <span class="section-kicker" data-i18n="step_1">Step 1</span>
+            <h2 data-i18n="profile_title">내 정보와 언어 설정</h2>
+          </div>
+
+          <label class="field">
+            <span data-i18n="name_label">이름</span>
+            <input
+              id="displayName"
+              type="text"
+              maxlength="24"
+              data-i18n-placeholder="name_placeholder"
+              placeholder="예: Host Kim"
+            />
+          </label>
+
+          <div class="field-grid">
+            <label class="field">
+              <span data-i18n="input_language_label">내 입력 언어 (STT)</span>
+              <select id="inputLanguage"></select>
+            </label>
+
+            <label class="field">
+              <span data-i18n="output_language_label">내 출력 언어 (번역 표시)</span>
+              <select id="outputLanguage"></select>
+            </label>
+          </div>
+
+          <p class="field-hint" data-i18n="profile_hint">
+            마이크를 켜면 음성이 텍스트로 변환되고, 번역은 화면에만 표시됩니다. 기기에서 소리는 재생되지 않습니다.
+          </p>
+        </article>
+
+        <article class="glass-panel form-panel">
+          <div class="section-head">
+            <span class="section-kicker" data-i18n="step_2">Step 2</span>
+            <h2 data-i18n="room_entry_title">방 만들기 또는 입장</h2>
+          </div>
+
+          <div class="action-stack">
+            <button id="createRoomBtn" class="primary-btn" data-i18n="create_room_button">새 대화방 만들기</button>
+            <div class="divider"><span data-i18n="divider_or">or</span></div>
+
+            <label class="field">
+              <span data-i18n="join_code_label">4자리 코드로 입장</span>
+              <div class="code-row">
+                <input
+                  id="roomCodeInput"
+                  type="text"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  maxlength="4"
+                  placeholder="1234"
+                />
+                <button id="joinRoomBtn" class="secondary-btn" data-i18n="join_button">입장</button>
+              </div>
+            </label>
+          </div>
+
+          <p id="statusMessage" class="status-message" aria-live="polite"></p>
+        </article>
+      </section>
+
+      <section id="roomSection" class="room-grid hidden">
+        <article class="glass-panel room-sidebar">
+          <div class="section-head">
+            <span class="section-kicker" data-i18n="room_kicker">Room</span>
+            <h2 data-i18n="room_title">실시간 대화방</h2>
+          </div>
+
+          <div class="room-code-box">
+            <span data-i18n="room_code_label">입장 코드</span>
+            <strong id="roomCodeLabel">0000</strong>
+            <button id="copyCodeBtn" class="ghost-btn" data-i18n="copy_code_button">코드 복사</button>
+          </div>
+
+          <div class="room-share-panel glass-card">
+            <div class="room-share-copy">
+              <strong data-i18n="room_share_title">QR 코드 또는 4자리 코드로 입장</strong>
+              <p data-i18n="room_share_hint">
+                상대방은 QR 코드를 스캔하거나 같은 코드 번호를 입력해 바로 이 대화방에 입장할 수 있습니다.
+              </p>
+            </div>
+          </div>
+
+          <div class="qr-panel glass-card">
+            <img id="qrImage" alt="대화방 QR 코드" />
+            <a id="joinLink" target="_blank" rel="noreferrer" data-i18n="open_join_link">브라우저 입장 링크 열기</a>
+          </div>
+
+          <div class="participant-panel">
+            <div class="participant-head">
+              <h3 data-i18n="participants_title">참여자</h3>
+              <span id="participantCount">0명</span>
+            </div>
+            <ul id="participantList" class="participant-list"></ul>
+          </div>
+        </article>
+
+        <article class="glass-panel conversation-panel">
+          <div class="conversation-topbar">
+            <div>
+              <span class="section-kicker" data-i18n="live_speech_kicker">Live Speech</span>
+              <h2 data-i18n="transcript_title">다국어 동시 번역 스트림</h2>
+            </div>
+            <div class="mic-cluster">
+              <button id="micToggleBtn" class="mic-btn" type="button" aria-pressed="false">
+                <span class="mic-core"></span>
+              </button>
+              <div class="mic-copy">
+                <strong id="micStateLabel" data-i18n="mic_off">마이크 꺼짐</strong>
+                <span data-i18n="mic_hint">눌러서 말하기 시작 / 다시 눌러 중단</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="external-audio-panel glass-card">
+            <div class="external-audio-copy">
+              <strong data-i18n="external_audio_title">External audio translation</strong>
+              <p data-i18n="external_audio_hint">
+                Share a browser tab or screen with audio to translate YouTube, Zoom, or Google Meet sound in this room.
+              </p>
+            </div>
+            <button
+              id="externalAudioBtn"
+              class="secondary-btn"
+              type="button"
+              data-i18n="external_audio_start_button"
+            >
+              Start external audio translation
+            </button>
+          </div>
+
+          <div class="floating-settings glass-card">
+            <label class="field">
+              <span data-i18n="room_input_language_label">내 입력 언어</span>
+              <select id="roomInputLanguage"></select>
+            </label>
+            <label class="field">
+              <span data-i18n="room_output_language_label">내 출력 언어</span>
+              <select id="roomOutputLanguage"></select>
+            </label>
+            <button id="saveSettingsBtn" class="secondary-btn compact-btn" data-i18n="save_language_button">언어 저장</button>
+          </div>
+
+          <div class="conversation-actions">
+            <button id="saveConversationBtn" class="secondary-btn" data-i18n="save_conversation_button">대화 저장</button>
+            <button id="deleteConversationBtn" class="ghost-btn danger-btn" data-i18n="delete_conversation_button">대화 삭제</button>
+            <button id="leaveRoomBtn" class="ghost-btn" data-i18n="leave_room_button">나가기</button>
+          </div>
+
+          <div id="speechSupportWarning" class="warning-banner hidden" data-i18n="speech_warning">
+            이 브라우저는 Web Speech API를 지원하지 않습니다. Chrome 또는 Edge 최신 버전을 권장합니다.
+          </div>
+
+          <div id="transcriptFeed" class="transcript-feed"></div>
+        </article>
+      </section>
+    </main>
+
+    <div id="settingsModal" class="settings-modal hidden" aria-hidden="true">
+      <div class="settings-backdrop" data-close-settings="true"></div>
+      <section class="settings-dialog glass-panel" role="dialog" aria-modal="true">
+        <div class="settings-header">
+          <div>
+            <span class="section-kicker" data-i18n="settings_kicker">Settings</span>
+            <h2 data-i18n="settings_title">앱 언어 선택</h2>
+          </div>
+          <button id="closeSettingsBtn" class="ghost-btn settings-close-btn" type="button" aria-label="Close">
+            ×
+          </button>
+        </div>
+
+        <label class="field">
+          <span data-i18n="ui_language_label">메뉴 및 기능 언어</span>
+          <select id="uiLanguageSelect">
+            <option value="ko">한국어</option>
+            <option value="en">English</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span data-i18n="speech_api_key_label">Google Speech API key</span>
+          <input
+            id="speechApiKeyInput"
+            type="password"
+            autocomplete="off"
+            data-i18n-placeholder="speech_api_key_placeholder"
+            placeholder="Paste a Google API key for external audio translation"
+          />
+        </label>
+
+        <p class="field-hint" data-i18n="speech_api_key_hint">
+          This key is stored only in this browser and is used for external audio translation when the server env is empty.
+        </p>
+
+        <div class="settings-actions">
+          <button id="applyUiLanguageBtn" class="primary-btn" type="button" data-i18n="apply_ui_language_button">적용하기</button>
+        </div>
+      </section>
+    </div>
+
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <script src="stt-languages.js"></script>
+    <script src="deploy-config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "multilingual-live-translation-app",
+  "version": "1.0.0",
+  "description": "QR and code based realtime multilingual translation web app",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "translation",
+    "socket.io",
+    "qr-code",
+    "speech-recognition",
+    "realtime"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.1"
+  }
+}
